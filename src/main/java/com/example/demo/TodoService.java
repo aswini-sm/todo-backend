@@ -1,69 +1,51 @@
 package com.example.demo;
 
-import com.google.api.core.ApiFuture;
-import com.google.firebase.database.DataSnapshot;
-import com.google.firebase.database.DatabaseError;
-import com.google.firebase.database.DatabaseReference;
-import com.google.firebase.database.FirebaseDatabase;
-import com.google.firebase.database.ValueEventListener;
-import org.springframework.stereotype.Service;
-
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.CountDownLatch;
+
+import org.springframework.stereotype.Service;
+
+import com.google.api.core.ApiFuture;
+import com.google.cloud.firestore.DocumentReference;
+import com.google.cloud.firestore.Firestore;
+import com.google.cloud.firestore.QueryDocumentSnapshot;
+import com.google.cloud.firestore.QuerySnapshot;
+import com.google.firebase.cloud.FirestoreClient;
 
 @Service
 public class TodoService {
 
-    private final DatabaseReference dbRef =
-        FirebaseDatabase.getInstance().getReference("todos");
+    // ✅ Don't initialize here — get it lazily inside each method
+    private Firestore getDb() {
+        return FirestoreClient.getFirestore();
+    }
 
-    // GET all todos
     public List<Todo> getAllTodos() throws Exception {
-        CountDownLatch latch = new CountDownLatch(1);
-        final DataSnapshot[] snapshotHolder = new DataSnapshot[1];
-        dbRef.addListenerForSingleValueEvent(new ValueEventListener() {
-            @Override
-            public void onDataChange(DataSnapshot dataSnapshot) {
-                snapshotHolder[0] = dataSnapshot;
-                latch.countDown();
-            }
-
-            @Override
-            public void onCancelled(DatabaseError databaseError) {
-                // Handle error if needed
-                latch.countDown();
-            }
-        });
-        latch.await();
-        DataSnapshot snapshot = snapshotHolder[0];
+        ApiFuture<QuerySnapshot> future = getDb().collection("todos").get();
+        List<QueryDocumentSnapshot> documents = future.get().getDocuments();
         List<Todo> todos = new ArrayList<>();
-        if (snapshot != null && snapshot.exists()) {
-            for (DataSnapshot child : snapshot.getChildren()) {
-                Todo todo = child.getValue(Todo.class);
-                if (todo != null) {
-                    todos.add(todo);
-                }
+        for (QueryDocumentSnapshot document : documents) {
+            Todo todo = document.toObject(Todo.class);
+            if (todo != null) {
+                todos.add(todo);
             }
         }
         return todos;
     }
 
-    // POST - add a new todo
     public void addTodo(Todo todo) throws Exception {
-        String id = dbRef.push().getKey();
+        DocumentReference docRef = getDb().collection("todos").document();
+        String id = docRef.getId();
         todo.setId(id);
-        dbRef.child(id).setValueAsync(todo).get();
+        docRef.set(todo).get();
     }
 
-    // PUT - update an existing todo
     public void updateTodo(String id, Todo todo) throws Exception {
         todo.setId(id);
-        dbRef.child(id).setValueAsync(todo).get();
+        getDb().collection("todos").document(id).set(todo).get();
     }
 
-    // DELETE - remove a todo
     public void deleteTodo(String id) throws Exception {
-        dbRef.child(id).removeValueAsync().get();
+        getDb().collection("todos").document(id).delete().get();
     }
 }
