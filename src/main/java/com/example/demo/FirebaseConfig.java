@@ -8,6 +8,7 @@ import jakarta.annotation.PostConstruct;
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.StandardCharsets;
 
 @Configuration
 public class FirebaseConfig {
@@ -17,7 +18,12 @@ public class FirebaseConfig {
         String credentialsJson = System.getenv("FIREBASE_CREDENTIALS");
         String dbUrl = System.getenv("FIREBASE_DB_URL");
 
-        InputStream serviceAccount = new ByteArrayInputStream(credentialsJson.getBytes());
+        // Fix private key line breaks that get lost in environment variables
+        credentialsJson = credentialsJson.replace("\\n", "\n");
+
+        InputStream serviceAccount = new ByteArrayInputStream(
+            credentialsJson.getBytes(StandardCharsets.UTF_8)
+        );
 
         FirebaseOptions options = FirebaseOptions.builder()
             .setCredentials(GoogleCredentials.fromStream(serviceAccount))
