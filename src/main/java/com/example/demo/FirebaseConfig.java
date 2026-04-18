@@ -9,17 +9,19 @@ import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 
 @Configuration
 public class FirebaseConfig {
 
     @PostConstruct
     public void init() throws IOException {
-        String credentialsJson = System.getenv("FIREBASE_CREDENTIALS");
+        String credentialsBase64 = System.getenv("FIREBASE_CREDENTIALS");
         String dbUrl = System.getenv("FIREBASE_DB_URL");
 
-        // Fix private key line breaks that get lost in environment variables
-        credentialsJson = credentialsJson.replace("\\n", "\n");
+        // Decode Base64 back to JSON string
+        byte[] decodedBytes = Base64.getDecoder().decode(credentialsBase64);
+        String credentialsJson = new String(decodedBytes, StandardCharsets.UTF_8);
 
         InputStream serviceAccount = new ByteArrayInputStream(
             credentialsJson.getBytes(StandardCharsets.UTF_8)
