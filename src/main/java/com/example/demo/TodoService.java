@@ -3,6 +3,7 @@ package com.example.demo;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.TimeUnit;
 
 import org.springframework.stereotype.Service;
 
@@ -22,6 +23,7 @@ public class TodoService {
 
     public List<Todo> getAllTodos() throws Exception {
         CompletableFuture<List<Todo>> future = new CompletableFuture<>();
+        
         getDbRef().addListenerForSingleValueEvent(new ValueEventListener() {
             @Override
             public void onDataChange(DataSnapshot snapshot) {
@@ -34,12 +36,14 @@ public class TodoService {
                 }
                 future.complete(todos);
             }
+
             @Override
             public void onCancelled(DatabaseError error) {
                 future.completeExceptionally(error.toException());
             }
         });
-        return future.get();
+
+        return future.get(10, TimeUnit.SECONDS);
     }
 
     public void addTodo(Todo todo) throws Exception {
@@ -50,7 +54,7 @@ public class TodoService {
             if (error != null) future.completeExceptionally(error.toException());
             else future.complete(null);
         });
-        future.get();
+        future.get(10, TimeUnit.SECONDS);
     }
 
     public void updateTodo(String id, Todo todo) throws Exception {
@@ -60,7 +64,7 @@ public class TodoService {
             if (error != null) future.completeExceptionally(error.toException());
             else future.complete(null);
         });
-        future.get();
+        future.get(10, TimeUnit.SECONDS);
     }
 
     public void deleteTodo(String id) throws Exception {
@@ -69,6 +73,6 @@ public class TodoService {
             if (error != null) future.completeExceptionally(error.toException());
             else future.complete(null);
         });
-        future.get();
+        future.get(10, TimeUnit.SECONDS);
     }
 }
